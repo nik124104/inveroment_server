@@ -14,15 +14,19 @@ from application.dto.schemas import (
 )
 from infrastructure.repositories.stock_repository import StockRepository
 from infrastructure.repositories.transaction_repository import TransactionRepository
-from infrastructure.database.connection_pool import database_service
-from api.middleware.auth import get_current_user, get_admin_user
+from api.middleware.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["Warehouse"])
 
 
-@router.get("/stock", response_model=List[StockItemResponse])
+@router.get(
+    "/stock",
+    response_model=List[StockItemResponse],
+    summary="Остатки материалов",
+    description="Возвращает список всех материалов с текущими остатками."
+)
 async def get_stock(
     only_positive: bool = False,
     current_user: dict = Depends(get_current_user)
@@ -34,23 +38,31 @@ async def get_stock(
     return stock
 
 
-@router.get("/stock/low")
+@router.get(
+    "/stock/low",
+    summary="Критический остаток",
+    description="Возвращает материалы, у которых остаток ниже минимального."
+)
 async def get_low_stock(
     current_user: dict = Depends(get_current_user)
 ):
-    """Получить материалы с остатком ниже минимума (требует авторизации)"""
+    """Получить материалы с остатком ниже минимума"""
     repo = StockRepository()
     low_stock = await repo.get_low_stock()
     logger.info(f"User {current_user['login']} requested low stock list")
     return low_stock
 
 
-@router.get("/stock/{material_id}")
+@router.get(
+    "/stock/{material_id}",
+    summary="Остаток материала",
+    description="Возвращает остаток конкретного материала по его ID."
+)
 async def get_stock_by_material(
     material_id: int,
     current_user: dict = Depends(get_current_user)
 ):
-    """Получить остаток конкретного материала (требует авторизации)"""
+    """Получить остаток конкретного материала"""
     repo = StockRepository()
     stock = await repo.get_by_material_id(material_id)
     if not stock:
@@ -58,12 +70,16 @@ async def get_stock_by_material(
     return stock
 
 
-@router.post("/material/in")
+@router.post(
+    "/material/in",
+    summary="Приход материала",
+    description="Оприходование материала на склад. Увеличивает остаток."
+)
 async def material_in(
     request: TransactionRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """Приход материала (требует авторизации)"""
+    """Приход материала"""
     try:
         repo = TransactionRepository()
         trans_id = await repo.create(
@@ -84,14 +100,17 @@ async def material_in(
         raise HTTPException(500, str(e))
 
 
-@router.post("/material/out")
+@router.post(
+    "/material/out",
+    summary="Расход материала",
+    description="Списание материала со склада. Проверяет наличие достаточного остатка."
+)
 async def material_out(
     request: TransactionRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """Расход материала с проверкой остатка (требует авторизации)"""
+    """Расход материала с проверкой остатка"""
     try:
-        # Проверяем остаток
         stock_repo = StockRepository()
         current_stock = await stock_repo.get_by_material_id(request.material_id)
         
@@ -125,60 +144,48 @@ async def material_out(
         raise HTTPException(500, str(e))
 
 
-@router.get("/transactions")
+@router.get(
+    "/transactions",
+    summary="История операций",
+    description="Возвращает список всех операций (приходов и расходов) с пагинацией."
+)
 async def get_transactions(
     limit: int = 100, 
     offset: int = 0,
     current_user: dict = Depends(get_current_user)
 ):
-    """Получить историю операций (требует авторизации)"""
+    """Получить историю операций"""
     repo = TransactionRepository()
     transactions = await repo.get_all(limit, offset)
     logger.info(f"User {current_user['login']} requested transactions history")
     return transactions
 
 
-@router.get("/transactions/material/{material_id}")
+@router.get(
+    "/transactions/material/{material_id}",
+    summary="Движения материала",
+    description="Возвращает историю операций по конкретному материалу."
+)
 async def get_material_transactions(
     material_id: int, 
     limit: int = 50,
     current_user: dict = Depends(get_current_user)
 ):
-    """Получить движения по конкретному материалу (требует авторизации)"""
+    """Получить движения по конкретному материалу"""
     repo = TransactionRepository()
     movements = await repo.get_by_material(material_id, limit)
     return movements
 
 
-@router.get("/stats/today")
+@router.get(
+    "/stats/today",
+    summary="Статистика за сегодня",
+    description="Возвращает количество и сумму приходов/расходов за текущий день."
+)
 async def get_today_stats(
     current_user: dict = Depends(get_current_user)
 ):
-    """Получить статистику за сегодня (требует авторизации)"""
+    """Получить статистику за сегодня"""
     repo = TransactionRepository()
     stats = await repo.get_today_stats()
     return stats
-
-
-# ============================================
-# Административные эндпоинты (только для admin)
-# ============================================
-
-@router.delete("/material/{material_id}")
-async def delete_material(
-    material_id: int,
-    current_user: dict = Depends(get_admin_user)
-):
-    """Удаление материала (только администратор)"""
-    # Здесь логика удаления материала
-    return {"message": f"Material {material_id} deleted"}
-
-
-@router.get("/admin/users")
-async def get_all_users(
-    current_user: dict = Depends(get_admin_user)
-):
-    """Получить список всех пользователей (только администратор)"""
-    from infrastructure.repositories.user_repository import user_repository
-    users = await user_repository.get_all()
-    return users

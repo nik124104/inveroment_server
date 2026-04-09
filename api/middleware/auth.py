@@ -8,6 +8,7 @@ from typing import Optional
 import logging
 
 from infrastructure.auth.jwt_handler import jwt_handler
+from infrastructure.auth.session_manager import session_manager
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ async def get_current_user(
     
     token = credentials.credentials
     
-    # Проверяем JWT токен
+    # 1. Проверяем JWT токен
     payload = jwt_handler.verify_token(token)
     if not payload:
         raise HTTPException(
@@ -38,11 +39,21 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # 2. Проверяем сессию в памяти
+    session = session_manager.validate_session(token)
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     return {
-        "id": payload['user_id'],
-        "login": payload['login'],
-        "role": payload['role'],
-        "full_name": payload.get('full_name')
+        "id": session['user_id'],
+        "login": session['login'],
+        "role": session['role'],
+        "full_name": session.get('full_name'),
+        "session_id": session.get('session_id') 
     }
 
 

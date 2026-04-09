@@ -1,13 +1,15 @@
 """
-Репозиторий для работы с остатками
+Репозиторий для работы с остатками (реализация MySQL)
 """
 
 from typing import List, Dict, Optional
 from decimal import Decimal
+from domain.repositories.stock_repository import StockRepositoryInterface
 from infrastructure.database.connection_pool import database_service
 
-class StockRepository:
-    """Репозиторий для работы с остатками"""
+
+class StockRepository(StockRepositoryInterface):
+    """Реализация StockRepository для MySQL"""
     
     def __init__(self, db=None):
         self.db = db or database_service

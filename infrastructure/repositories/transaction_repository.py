@@ -1,14 +1,16 @@
 """
-Репозиторий для работы с транзакциями
+Репозиторий для работы с транзакциями (реализация MySQL)
 """
 
 from typing import List, Dict, Optional
 from decimal import Decimal
 from datetime import datetime
+from domain.repositories.transaction_repository import TransactionRepositoryInterface
 from infrastructure.database.connection_pool import database_service
 
-class TransactionRepository:
-    """Репозиторий для работы с транзакциями"""
+
+class TransactionRepository(TransactionRepositoryInterface):
+    """Реализация TransactionRepository для MySQL"""
     
     def __init__(self, db=None):
         self.db = db or database_service
@@ -16,12 +18,8 @@ class TransactionRepository:
     async def create(self, trans_type: str, user_id: int, 
                      material_id: int, quantity: Decimal, 
                      comment: str = "") -> int:
-        """
-        Создать транзакцию (триггер сам обновит остаток)
-        Возвращает ID транзакции
-        """
+        """Создать транзакцию"""
         async with self.db.transaction() as conn:
-            # Создаём транзакцию
             query_trans = """
                 INSERT INTO transactions (type, user_id, comment)
                 VALUES (%s, %s, %s)
@@ -30,7 +28,6 @@ class TransactionRepository:
                 await cur.execute(query_trans, (trans_type, user_id, comment))
                 trans_id = cur.lastrowid
                 
-                # Добавляем позицию
                 query_item = """
                     INSERT INTO transaction_items (transaction_id, material_id, quantity)
                     VALUES (%s, %s, %s)
@@ -40,7 +37,7 @@ class TransactionRepository:
                 return trans_id
     
     async def get_all(self, limit: int = 100, offset: int = 0) -> List[Dict]:
-        """Получить все транзакции с деталями"""
+        """Получить все транзакции"""
         query = """
             SELECT 
                 t.id,
@@ -60,7 +57,7 @@ class TransactionRepository:
         return await self.db.fetch_all(query, (limit, offset))
     
     async def get_by_material(self, material_id: int, limit: int = 50) -> List[Dict]:
-        """Получить движения по конкретному материалу"""
+        """Получить движения по материалу"""
         query = """
             SELECT 
                 t.id,

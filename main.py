@@ -2,7 +2,7 @@ import asyncio
 import logging
 from fastapi import FastAPI
 import uvicorn
-from api.routes import auth, stock
+from api.routes import auth, stock, health, material_groups
 from config import config
 from infrastructure.database.connection_pool import database_service
 from api.routes import health
@@ -25,6 +25,7 @@ app = FastAPI(
 app.include_router(health.router, prefix="", tags=["System"])
 app.include_router(auth.router)
 app.include_router(stock.router)
+app.include_router(material_groups.router)
 
 class WarehouseServer:
     """Главный класс сервера"""
