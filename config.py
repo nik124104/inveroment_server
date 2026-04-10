@@ -15,7 +15,7 @@ class DatabaseConfig:
     host: str = "localhost"
     port: int = 3306
     user: str = "root"
-    password: str = ""
+    password: str = "root"
     database: str = "inventory"
     pool_size: int = 10
     pool_recycle: int = 3600

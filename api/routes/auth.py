@@ -163,7 +163,7 @@ async def terminate_session(
 
 @router.post("/change-password")
 async def change_password(
-    user_id: int,
+    login: str,
     new_password: str,
     current_user: dict = Depends(get_current_user),
 ):
@@ -179,7 +179,7 @@ async def change_password(
         raise HTTPException(400, "Password must be at least 4 characters")
 
     # ✅ Получаем пользователя
-    user = await user_repository.get_by_id(user_id)
+    user = await user_repository.get_by_login(login)
     if not user:
         raise HTTPException(
             status_code=404,
@@ -188,24 +188,27 @@ async def change_password(
 
     # ✅ Хешируем пароль
     new_hash = password_hasher.hash_password(new_password)
-
+    logger.info(f"login {login};user_id {user['id']} new_password {new_password} ; new_hash {new_hash} !!")
     # ✅ Обновляем пароль
-    success = await user_repository.change_password(current_user['id'], new_hash)
+    success = await user_repository.change_password(user['id'], new_hash)
 
     if success:
-        # Завершаем все остальные сессии (кроме текущей)
-        current_session_id = current_user.get('session_id')
-        sessions = session_manager.get_active_sessions(current_user['id'])  # без await
+        # Завершаем все сессии пользователя
+        sessions = session_manager.get_active_sessions(user['id'])  # без await
         
         terminated = 0
         for session in sessions:
-            if session['id'] != current_session_id:
-                session_manager.invalidate_session_by_id(session['id'])  # без await
-                terminated += 1
+            # Удаляем все сессии без исключений
+            session_manager.invalidate_session_by_id(session['id'])
+            terminated += 1
         
         logger.info(f"User {current_user['login']} changed password, terminated {terminated} other sessions")
         
-        return {"message": "Password changed", "other_sessions_terminated": terminated}
+        return {
+            "message": "Password changed successfully", 
+            "all_sessions_terminated": terminated,
+            "note": "User must login again on all devices"
+        }
     
     raise HTTPException(500, "Failed to change password")
 

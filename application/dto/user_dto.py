@@ -2,8 +2,9 @@
 DTO для пользователей
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
+
 
 class LoginRequest(BaseModel):
     """Запрос на логин"""
@@ -24,3 +25,8 @@ class UserInfo(BaseModel):
     login: str
     role: str
     full_name: Optional[str] = None
+    
+class ChangePasswordRequest(BaseModel):
+    """Запрос на смену пароля"""   
+    login: str
+    new_password: str

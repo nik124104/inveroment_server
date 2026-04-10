@@ -2,10 +2,12 @@
 Репозиторий для работы с пользователями (реализация MySQL)
 """
 
+import logging
 from typing import Optional, Dict, List
 from domain.repositories.user_repository import UserRepositoryInterface
 from infrastructure.database.connection_pool import database_service
 
+logger = logging.getLogger(__name__)
 
 class UserRepository(UserRepositoryInterface):
     """Реализация UserRepository для MySQL"""
@@ -49,7 +51,8 @@ class UserRepository(UserRepositoryInterface):
     async def change_password(self, user_id: int, new_password_hash: str) -> bool:
         """Смена пароля"""
         query = "UPDATE users SET password_hash = %s WHERE id = %s"
-        rows = await self.db.execute(query, (new_password_hash, user_id))
+        rows = await self.db.execute(query, (new_password_hash, user_id,))
+        logger.info(f"SQL: {rows}; new_password_hash:{new_password_hash}; user_id:{user_id}")
         return rows > 0
 
 # Глобальный экземпляр
