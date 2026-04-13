@@ -188,7 +188,6 @@ async def change_password(
 
     # ✅ Хешируем пароль
     new_hash = password_hasher.hash_password(new_password)
-    logger.info(f"login {login};user_id {user['id']} new_password {new_password} ; new_hash {new_hash} !!")
     # ✅ Обновляем пароль
     success = await user_repository.change_password(user['id'], new_hash)
 

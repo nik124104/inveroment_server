@@ -77,6 +77,7 @@ class DatabaseService:
         async with self.get_connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, params)
+                await conn.commit() 
                 return cur.rowcount
                 
     async def fetch_one(self, query: str, params: tuple = None) -> Optional[Dict]:

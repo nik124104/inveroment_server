@@ -52,7 +52,6 @@ class UserRepository(UserRepositoryInterface):
         """Смена пароля"""
         query = "UPDATE users SET password_hash = %s WHERE id = %s"
         rows = await self.db.execute(query, (new_password_hash, user_id,))
-        logger.info(f"SQL: {rows}; new_password_hash:{new_password_hash}; user_id:{user_id}")
         return rows > 0
 
 # Глобальный экземпляр
